@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Cliente 1</title>
+  </head>
+  <body>
+    <a id="downloadHelper"></a>
+    <div>Eu sou o cliente 1</div>
+    <div>
+      <input type="text" id="messageToSent" />
+      <button onclick="sendMessage()">Enviar mensagem</button>
+    </div>
+  </body>
+  <script>
+    // Se conecta ao websocket na porta 6787
+    const socket = new WebSocket("ws://localhost:6787");
+
+    // evento que escuta a abertura da conexão com o servidor WebSocket
+    socket.addEventListener("open", (event) => {
+      console.log("Conectado ao servidor WebSocket na porta 6787");
+    });
+
+    // Evento que escuta o recebimento de mensagens do servidor WebSocket
+    socket.addEventListener("message", (event) => {
+      if (event.data) {
+        const response = JSON.parse(event.data);
+        // Se a resposta for do tipo message, o código apenas mostra a mensagem no console
+        if (response.message) {
+          // Mostra mensagem do servidor
+          console.log(response.message);
+          // Caso a resposta seja um arquivo o código prepara um elemento <a> que irá fazer o download dos arquivos por trás dos panos
+        } else if (response.files) {
+          downloadAll(response.files);
+        }
+      }
+    });
+
+    // Método recursivo que faz o download dos arquivos
+    const downloadAll = (files) => {
+      if (files.length === 0) return;
+      const file = files.pop();
+      const link = document.querySelector("#downloadHelper");
+      link.download = "arquivoDoWebSocket.txt";
+      const urlDownload = "data:application/octet-stream;base64," + file;
+      link.href = urlDownload;
+      link.click();
+
+      //Caso seja aberto no firefox é necessario este código
+      setTimeout(function () {
+        window.URL.revokeObjectURL(urlDownload);
+      }, 100);
+      downloadAll(files);
+    };
+    // Método que envia mensagem para o sevidor
+    const sendMessage = () => {
+      const inputElement = document.querySelector("#messageToSent");
+      const messageToSent = inputElement.value;
+      // Tratamento de erros ao nao enviar mensagem
+      if (!messageToSent) {
+        alert("Você deve informar algum dado para enviar ao WebSocket!");
+        return;
+      }
+      // envia mensagem ao servidor
+      socket.send(messageToSent);
+      // apaga o valor do inputElement após enviar
+      inputElement.value = "";
+    };
+  </script>
+</html>
